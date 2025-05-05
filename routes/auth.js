@@ -1,5 +1,5 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const router = express.Router();
@@ -25,8 +25,8 @@ router.post('/register', async (req, res) => {
     else console.log("User does not exist, proceeding with registration");
 
     // Hash password and save user
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ name, phone, password: hashedPassword, email });
+    
+    const user = new User({ name, phone, password, email });
     await user.save();
 
     console.log("User created:", user);
@@ -43,15 +43,16 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) return res.status(401).json({ message: 'Credenciais Invalidos' });
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!isMatch) return res.status(401).json({ message: 'Palava-passe errada' });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token, user: { id: user._id, name: user.name, phone: user.phone } });
+    console.log("User logged in:", user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 //test DB
@@ -66,13 +67,40 @@ router.get('/test', async (req, res) => {
 // Protected Route
 router.get('/profile', async (req, res) => {
   try {
-    const token = req.header('Authorization').replace('Bearer ', '');
+    // Get token from Authorization header
+    const authHeader = req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Authorization token missing' });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ user });
+    console.log("Decoded token:", decoded);
+    // Find user without password field
+    const user = await User.findById(decoded.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Return only necessary user data
+    res.json({
+      name: user.name,
+      email: user.email,
+      phone: user.phone
+    });
+
   } catch (err) {
-    res.status(401).json({ error: 'Unauthorized' });
+    console.error('Profile error:', err);
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired' });
+    }
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
