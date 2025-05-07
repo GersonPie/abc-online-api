@@ -36,7 +36,7 @@ router.get('/curso/:id', async (req, res)=>{
 router.post('/addcurso', async (req, res)=>{
     try {
         console.log('body',req.body)
-        const { title, description, instructor, price, category, level, duration, syllabus } = req.body
+        const { title, description,nextClass, instructor, price, category, level, duration, syllabus, image } = req.body
         const newCurso = new Course({
             title,
             description,
@@ -44,20 +44,22 @@ router.post('/addcurso', async (req, res)=>{
             price,
             category,
             level,
+            nextClass,
             duration,
+            image,
             syllabus
         })
         await newCurso.save()
         res.status(201).json(newCurso)
     } catch (err) {
-        console.error("Error creating course:", err);
+        console.log("Error creating course:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 }
 )
 router.put('/curso/:id', async (req, res)=>{
     try {
-        const { title, description, instructor, price, category, level, duration, nextClass, image, syllabus } = req.body
+        const { title, description, instructor, price, category, level, duration, image,nextClass, syllabus } = req.body
         const curso = await Course.findByIdAndUpdate(req.params.id, {
             title,
             description,
@@ -84,6 +86,7 @@ router.delete('/curso/:id', async (req, res)=>{
     try {
         const curso = await Course.findByIdAndDelete(req.params.id)
         if (!curso) {
+            
             return res.status(404).json({ error: "Course not found" });
         }
         res.json({ message: "Course deleted successfully" })
@@ -105,7 +108,7 @@ router.post('/curso/:id/matricular', async (req, res)=>{
         }
         curso.studentsEnrolled.push(userId)
         await curso.save()
-        res.json(curso)
+        1
     } catch (err) {
         console.error("Error enrolling in course:", err);
         res.status(500).json({ error: "Internal server error" });
