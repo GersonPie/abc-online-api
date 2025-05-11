@@ -105,17 +105,23 @@ router.get('/profile', async (req, res) => {
 });
 
 router.post('/adminLogin', async (req, res) => {
+  var user = null;
   try {
     const { email, password } = req.body;
+    user = {
+      email,
+      password 
+    }
+    console.log('Admin login request:', req.body); // Debug log
     if(email === "AbcOnline" && password === "21abc-ca3112@online") {
         const token = jwt.sign({ id: "admin" }, process.env.JWT_SECRET, { expiresIn: '10min' });
-    res.json({ token, user: { id: user._id, name: user.name, phone: user.phone } });
+    res.json({ token, user: { id: "admin", name: user.name, phone: user.phone } });
     console.log("User logged in:", user);
   
       return res.status(200).json({ message: "Login successful" });
     }
     else{
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: "Credênciais Invalidos" });
     }
     } catch (err) {
     res.status(500).json({ message: err.message });
